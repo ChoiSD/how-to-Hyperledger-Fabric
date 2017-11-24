@@ -153,7 +153,7 @@ docker exec -it \
 -e CORE_PEER_TLS_ENABLED=true \
 -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp \
 cli \
-peer channel signconfigtx -f pb/config_update_as_envelope.pb \
+peer channel signconfigtx -f config_update_as_envelope.pb \
 -o orderer.example.com:7050 --tls --cafile ./crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
 ```
 
@@ -167,7 +167,7 @@ docker exec -it \
 -e CORE_PEER_TLS_ENABLED=true \
 -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp \
 cli \
-peer channel signconfigtx -f pb/config_update_as_envelope.pb \
+peer channel signconfigtx -f config_update_as_envelope.pb \
 -o orderer0.example.com:7050 --tls --cafile ./crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
 ```
 
@@ -181,7 +181,7 @@ docker exec -it \
 -e CORE_PEER_TLS_ENABLED=true \
 -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp \
 cli \
-peer channel update -f pb/config_update_as_envelope.pb \
+peer channel update -f config_update_as_envelope.pb \
 -o orderer.example.com:7050 -c mychannel --tls --cafile ./crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
 ```
 
@@ -207,7 +207,7 @@ services:
       - CORE_PEER_ADDRESS=peer0.org3.example.com:7051
       - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org3.example.com:7051
       - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org3.example.com:7051
-      - CORE_PEER_LOCALMSPID=Or32MSP
+      - CORE_PEER_LOCALMSPID=Or3MSP
     volumes:
         - /var/run/:/host/var/run/
         - ./crypto-config/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/msp:/etc/hyperledger/fabric/msp
