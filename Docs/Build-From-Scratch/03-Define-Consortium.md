@@ -44,18 +44,6 @@ chmod 600 *_sk
 
 ## Run Fabric CA server(CA2)
 
-Run PostgreSQL server:
-```
-docker volume create ca_org2_data
-docker run -d --name postgres_org2 \
-        --network howto_network \
-        -v ca_org2_data:/var/lib/postgresql/data \
-        -e POSTGRES_USER=caorg2 \
-        -e POSTGRES_PASSWORD=secretfororg2 \
-        -e POSTGRES_DB=fabric \
-        postgres:9.5
-```
-
 Run Fabric CA server:
 ```
 PRIVATE=$(ls *_sk)
@@ -66,8 +54,6 @@ docker run -d --name ca0_org2 --hostname ca0.org2.com \
         -v $PWD/$PUBLIC:/etc/hyperledger/fabric-ca-server/public.pem \
         -e FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server/public.pem \
         -e FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server/private.key \
-        -e FABRIC_CA_SERVER_DB_TYPE=postgres \
-        -e FABRIC_CA_SERVER_DB_DATASOURCE="host=postgres_org2 port=5432 user=caorg2 password=secretfororg2 dbname=fabric sslmode=disable" \
         hyperledger/fabric-ca:1.3.0 \
         fabric-ca-server start -b admin:admin4org2
 ```

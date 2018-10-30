@@ -6,7 +6,7 @@ The goal is depicted as:
 
 R1 : org1.com
 
-## Create a self-signed CA certificate
+## Create a self-signed CA certificate for R1
 
 Locate yourself in a path where `openssl.cnf` file exists.
 *I assume that you have just done [01-Create-Network.md](https://github.com/ChoiSD/how-to-Hyperledger-Fabric/blob/master/Docs/Build-From-Scratch/01-Create-Network.md)*
@@ -44,18 +44,6 @@ chmod 600 *_sk
 
 ## Run Fabric CA server(CA1)
 
-Run PostgreSQL server:
-```
-docker volume create ca_org1_data
-docker run -d --name postgres_org1 \
-        --network howto_network \
-        -v ca_org1_data:/var/lib/postgresql/data \
-        -e POSTGRES_USER=caorg1 \
-        -e POSTGRES_PASSWORD=secretfororg1 \
-        -e POSTGRES_DB=fabric \
-        postgres:9.5
-```
-
 Run Fabric CA server:
 ```
 PRIVATE=$(ls *_sk)
@@ -66,8 +54,6 @@ docker run -d --name ca0_org1 --hostname ca0.org1.com \
         -v $PWD/$PUBLIC:/etc/hyperledger/fabric-ca-server/public.pem \
         -e FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server/public.pem \
         -e FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server/private.key \
-        -e FABRIC_CA_SERVER_DB_TYPE=postgres \
-        -e FABRIC_CA_SERVER_DB_DATASOURCE="host=postgres_org1 port=5432 user=caorg1 password=secretfororg1 dbname=fabric sslmode=disable" \
         hyperledger/fabric-ca:1.3.0 \
         fabric-ca-server start -b admin:admin4org1
 ```

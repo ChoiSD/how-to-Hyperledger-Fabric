@@ -89,19 +89,6 @@ chmod 600 *_sk
 ## Run Fabric CA server(CA4)
 We are going to issue admin and orderer certificate thru Fabric CA server.
 
-Run PostgreSQL server which contains Fabric CA's data:
-```
-docker network create howto_network
-docker volume create ca_org4_data
-docker run -d --name postgres_org4 \
-        --network howto_network \
-        -v ca_org4_data:/var/lib/postgresql/data \
-        -e POSTGRES_USER=caorg4 \
-        -e POSTGRES_PASSWORD=secretfororg4 \
-        -e POSTGRES_DB=fabric \
-        postgres:9.5
-```
-
 Run Fabric CA server:
 ```
 PRIVATE=$(ls *_sk)
@@ -112,8 +99,6 @@ docker run -d --name ca0_org4 --hostname ca0.org4.com \
         -v $PWD/$PUBLIC:/etc/hyperledger/fabric-ca-server/public.pem \
         -e FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server/public.pem \
         -e FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server/private.key \
-        -e FABRIC_CA_SERVER_DB_TYPE=postgres \
-        -e FABRIC_CA_SERVER_DB_DATASOURCE="host=postgres_org4 port=5432 user=caorg4 password=secretfororg4 dbname=fabric sslmode=disable" \
         hyperledger/fabric-ca:1.3.0 \
         fabric-ca-server start -b admin:admin4org4
 ```
