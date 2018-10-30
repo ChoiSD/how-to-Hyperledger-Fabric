@@ -71,23 +71,22 @@ EOF
 
 Generate a private key file and a self-signed certificate using OpenSSL:
 ```
-// Create local MSP folders
+# Create local MSP folders
 mkdir -p org4.com/users org4.com/ca; cd org4.com/ca
-
-// Generate serial number
+# Generate serial number
 SERIAL=$(xxd -l 16 -p /dev/random)
-// Generate ecdsa private key
+# Generate ecdsa private key
 openssl ecparam -genkey -name prime256v1 -out private.key
-// Generate a self-signed CA certificate
+# Generate a self-signed CA certificate
 openssl req -new -x509 -set_serial 0x${SERIAL} -key private.key -out ca.org4.com-cert.pem -days 3650 -config ../../openssl.cnf
-// Transform ecdsa private key into private key
+# Transform private key into pkcs8 format
 openssl pkcs8 -topk8 -nocrypt -in private.key -out signcert-key.pem
 rm -f private.key
-mv signcert-key.pem $(openssl x509 -noout -pubkey -in ca.org4.com-cert.pem | openssl asn1parse -strparse 23 -in - | openssl dgst -sha256 - | awk '{print $2}')_sk
+mv signcert-key.pem $(openssl x509 -noout -pubkey -in ca.org4.com-cert.pem | openssl asn1parse -strparse 23 -in - | openssl dgst -sha256 | awk '{print $2}')_sk
 chmod 600 *_sk
 ```
 
-## Run Fabric CA server
+## Run Fabric CA server(CA4)
 We are going to issue admin and orderer certificate thru Fabric CA server.
 
 Run PostgreSQL server which contains Fabric CA's data:
@@ -124,31 +123,31 @@ docker run -d --name ca0_org4 --hostname ca0.org4.com \
 Download CA client binary:
 ```
 cd ../users
-curl https://nexus.hyperledger.org/content/repositories/releases/org/hyperledger/fabric-ca/hyperledger-fabric-ca/linux-amd64-1.3.0/hyperledger-fabric-ca-linux-amd64-1.3.0.tar.gz | tar xz
+curl https://nexus.hyperledger.org/content/repositories/releases/org/hyperledger/fabric-ca/hyperledger-fabric-ca/linux-amd64-1.3.0/hyperledger-fabric-ca-linux-amd64-1.3.0.tar.gz | tar -xz -C ../../
 ```
 
 Get admin user's certificate from CA server:
 ```
 mkdir admin
-// Get IP address of CA server
+# Get IP address of CA server
 IP=$(docker inspect ca0_org4 -f '{{.NetworkSettings.Networks.howto_network.IPAddress}}')
-// Get certificate
+# Get certificate
 export FABRIC_CA_CLIENT_HOME=$PWD/admin
-bin/fabric-ca-client enroll -u http://admin:admin4org4@${IP}:7054 --csr.cn admin --csr.names C=KR,ST=Seoul,L=Gangdong-gu,O=org4.com
+../../bin/fabric-ca-client enroll -u http://admin:admin4org4@${IP}:7054 --csr.cn admin --csr.names C=KR,ST=Seoul,L=Gangdong-gu,O=org4.com
 ```
 
 ## Get orderer's certificate
 
 Register orderer:
 ```
-bin/fabric-ca-client register --id.name orderer --id.type orderer --id.maxenrollments 1 --id.secret ordererpw
+../../bin/fabric-ca-client register --id.name orderer --id.type orderer --id.maxenrollments 1 --id.secret ordererpw
 ```
 
 Enroll orderer:
 ```
 mkdir orderer
 export FABRIC_CA_CLIENT_HOME=$PWD/orderer
-bin/fabric-ca-client enroll -u http://orderer.ordererpw@${IP}:7054 --csr.cn orderer.org4.com --csr.names C=KR,ST=Seoul,L=Gangdong-gu,O=org4.com
+../../bin/fabric-ca-client enroll -u http://orderer.ordererpw@${IP}:7054 --csr.cn orderer.org4.com --csr.names C=KR,ST=Seoul,L=Gangdong-gu,O=org4.com
 ```
 
 Copy Admin's certificate:
@@ -157,10 +156,11 @@ mkdir orderer/msp/admincerts
 cp admin/msp/signcerts/cert.pem orderer/msp/admincerts/
 ```
 
-## Run orderer
+## Create a network configuration(NC4)
 
-Write configuration file:
+Write network configuration file:
 ```
+cd ../..
 cat > configtx.yaml <<EOF
 Profiles:
   SampleSoloGenesis:
@@ -179,7 +179,7 @@ Profiles:
     Orderer:
       OrdererType: solo
       Addresses:
-        - 127.0.0.1:7050
+        - orderer.org4.com:7050
       BatchTimeout: 2s
       BatchSize:
         MaxMessageCount: 10
@@ -204,7 +204,7 @@ Profiles:
       Organizations:
         - Name: Org4
           ID: Org4MSP
-          MSPDir: msp
+          MSPDir: org4.com/users/orderer/msp
           Policies:
             Readers:
               Type: Signature
@@ -221,16 +221,29 @@ Profiles:
 EOF
 ```
 
-Run orderer:
+Download Hyperledger Fabric tools:
+```
+curl https://nexus.hyperledger.org/content/repositories/releases/org/hyperledger/fabric/hyperledger-fabric/linux-amd64-1.3.0/hyperledger-fabric-linux-amd64-1.3.0.tar.gz | tar -xz
+```
+
+Generate a genesis block with NC4:
+```
+export FABRIC_CFG_PATH=$PWD
+bin/configtxgen -profile SampleSoloGenesis -channelID syschannel -outputBlock ./genesis.block
+```
+
+## Run orderer(O4)
+
 ```
 docker run -d --name orderer --hostname orderer.org4.com \
         --network howto_network \
-        -v $PWD/configtx.yaml:/etc/hyperledger/fabric/configtx.yaml \
-        -v $PWD/orderer/msp:/etc/hyperledger/fabric/msp \
+        -v $PWD/genesis.block:/var/hyperledger/fabric/genesis.block \
+        -v $PWD/org4.com/users/orderer/msp:/var/hyperledger/fabric/msp \
         -e ORDERER_GENERAL_LISTENADDRESS=0.0.0.0 \
         -e ORDERER_GENERAL_LOGLEVEL=debug \
-        -e ORDERER_GENERAL_GENESISPROFILE=SampleSoloGenesis \
-        -e ORDERER_GENERAL_LOCALMSPDIR=/etc/hyperledger/fabric/msp \
+        -e ORDERER_GENERAL_GENESISMETHOD=file \
+        -e ORDERER_GENERAL_GENESISFILE=/var/hyperledger/fabric/genesis.block \
+        -e ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/fabric/msp \
         -e ORDERER_GENERAL_LOCALMSPID=Org4MSP \
         hyperledger/fabric-orderer:1.3.0 \
         orderer
