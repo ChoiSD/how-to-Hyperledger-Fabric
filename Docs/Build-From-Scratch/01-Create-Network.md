@@ -1,4 +1,5 @@
 # Creating blockchain network
+
 In this guide, we will create a basis of a blockchain network, Ordering service.
 A goal of this guide can be conceptually represented by a below picture:
 ![network pic](https://hyperledger-fabric.readthedocs.io/en/release-1.3/_images/network.diagram.2.png "Target network - 01")
@@ -8,7 +9,8 @@ R4 : org4.com
 ## Create a self-signed CA certificate
 
 Create a openssl configuration file:
-```
+
+```bash
 cat > openssl.cnf <<EOF
 dir                                     = .
 
@@ -32,7 +34,7 @@ commonName                              = supplied
 emailAddress                            = optional
 
 [ req ]
-default_md		                		= sha256
+default_md                                = sha256
 distinguished_name                      = req_distinguished_name
 req_extensions                          = v3_req
 x509_extensions                         = v3_ca
@@ -70,7 +72,8 @@ EOF
 ```
 
 Generate a private key file and a self-signed certificate using OpenSSL:
-```
+
+```bash
 # Create local MSP folders
 mkdir -p org4.com/users org4.com/ca; cd org4.com/ca
 # Generate serial number
@@ -87,10 +90,12 @@ chmod 600 *_sk
 ```
 
 ## Run Fabric CA server(CA4)
+
 We are going to issue admin and orderer certificate thru Fabric CA server.
 
 Run Fabric CA server:
-```
+
+```bash
 PRIVATE=$(ls *_sk)
 PUBLIC=$(ls *.pem)
 docker run -d --name ca0_org4 --hostname ca0.org4.com \
@@ -106,13 +111,15 @@ docker run -d --name ca0_org4 --hostname ca0.org4.com \
 ## Get admin's certificate
 
 Download CA client binary:
-```
+
+```bash
 cd ../users
 curl https://nexus.hyperledger.org/content/repositories/releases/org/hyperledger/fabric-ca/hyperledger-fabric-ca/linux-amd64-1.3.0/hyperledger-fabric-ca-linux-amd64-1.3.0.tar.gz | tar -xz -C ../../
 ```
 
 Get admin user's certificate from CA server:
-```
+
+```bash
 mkdir admin
 # Get IP address of CA server
 IP=$(docker inspect ca0_org4 -f '{{.NetworkSettings.Networks.howto_network.IPAddress}}')
@@ -124,19 +131,22 @@ export FABRIC_CA_CLIENT_HOME=$PWD/admin
 ## Get orderer's certificate
 
 Register orderer:
-```
+
+```bash
 ../../bin/fabric-ca-client register --id.name orderer --id.type orderer --id.maxenrollments 1 --id.secret ordererpw
 ```
 
 Enroll orderer:
-```
+
+```bash
 mkdir orderer
 export FABRIC_CA_CLIENT_HOME=$PWD/orderer
 ../../bin/fabric-ca-client enroll -u http://orderer.ordererpw@${IP}:7054 --csr.cn orderer.org4.com --csr.names C=KR,ST=Seoul,L=Gangdong-gu,O=org4.com
 ```
 
 Copy Admin's certificate:
-```
+
+```bash
 mkdir orderer/msp/admincerts
 cp admin/msp/signcerts/cert.pem orderer/msp/admincerts/
 ```
@@ -144,7 +154,8 @@ cp admin/msp/signcerts/cert.pem orderer/msp/admincerts/
 ## Create a network configuration(NC4)
 
 Write network configuration file:
-```
+
+```bash
 cd ../..
 cat > configtx.yaml <<EOF
 Profiles:
@@ -207,19 +218,21 @@ EOF
 ```
 
 Download Hyperledger Fabric tools:
-```
+
+```bash
 curl https://nexus.hyperledger.org/content/repositories/releases/org/hyperledger/fabric/hyperledger-fabric/linux-amd64-1.3.0/hyperledger-fabric-linux-amd64-1.3.0.tar.gz | tar -xz
 ```
 
 Generate a genesis block with NC4:
-```
+
+```bash
 export FABRIC_CFG_PATH=$PWD
 bin/configtxgen -profile SampleSoloGenesis -channelID syschannel -outputBlock ./genesis.block
 ```
 
 ## Run orderer(O4)
 
-```
+```bash
 docker run -d --name orderer --hostname orderer.org4.com \
         --network howto_network \
         -v $PWD/genesis.block:/var/hyperledger/fabric/genesis.block \

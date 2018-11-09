@@ -1,4 +1,5 @@
 # Adding network administrator
+
 Currently administrators of R4 has administrative rights over the network.
 We are going to allow administrators of other organization(R1) to administer the network.
 The goal is depicted as:
@@ -12,7 +13,8 @@ Locate yourself in a path where `openssl.cnf` file exists.
 *I assume that you have just done [01-Create-Network.md](https://github.com/ChoiSD/how-to-Hyperledger-Fabric/blob/master/Docs/Build-From-Scratch/01-Create-Network.md)*
 
 Generate a private key and a self-signed certificate for R1:
-```
+
+```bash
 # Create MSP folders
 mkdir -p org1.com/ca org1.com/users; cd org1.com/ca
 # Generate serial number
@@ -24,7 +26,8 @@ openssl req -new -x509 -set_serial 0x${SERIAL} -key private.key -out ca.org1.com
 ```
 
 As there are some pre-configured values in `openssl.cnf`, we need to do put some values in this time like below:
-```
+
+```bash
 Country Name (2 letter code) [KR]:
 State or Province Name (full name) [Seoul]:
 Locality Name (eg, city) [Gangdong-gu]:
@@ -35,7 +38,8 @@ Email Address []:
 ```
 
 Transfrom private key into pkcs8 format:
-```
+
+```bash
 openssl pkcs8 -topk8 -nocrypt -in private.key -out signcert-key.pem
 rm -f private.key
 mv signcert-key.pem $(openssl x509 -noout -pubkey -in ca.org1.com-cert.pem | openssl asn1parse -strparse 23 -in - | openssl dgst -sha256 | awk '{print $2}')_sk
@@ -45,7 +49,8 @@ chmod 600 *_sk
 ## Run Fabric CA server(CA1)
 
 Run Fabric CA server:
-```
+
+```bash
 PRIVATE=$(ls *_sk)
 PUBLIC=$(ls *.pem)
 docker run -d --name ca0_org1 --hostname ca0.org1.com \
@@ -61,7 +66,8 @@ docker run -d --name ca0_org1 --hostname ca0.org1.com \
 ## Get admin's certificate
 
 Get admin user's certificate from CA server:
-```
+
+```bash
 cd ../users
 mkdir admin
 # Get IP address of CA server
@@ -77,7 +83,8 @@ cp admin/msp/signcerts/cert.pem admin/msp/admincerts/
 ## Allow member of other organization(R1) to administer a network
 
 Write a update network configuration file:
-```
+
+```bash
 cd ../..
 cat > configtx.yaml <<EOF
 Profiles:
@@ -153,14 +160,15 @@ EOF
 ```
 
 Generate an update genesis block with updated NC4:
-```
+
+```bash
 export FABRIC_CFG_PATH=$PWD
 bin/configtxgen -profile SampleSoloGenesis -channelID syschannel -outputBlock ./genesis.block.updated
 ```
 
 ## Run orderer(O4) with updated configuration
 
-```
+```bash
 # Stop existing orderer
 docker rm -f orderer
 # Run orderer
