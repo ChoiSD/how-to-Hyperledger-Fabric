@@ -9,7 +9,7 @@ This guide is configured with several sub-guides which are sorted by number in f
 ## Environment
 
 - Linux Operating System with docker installed
-- Hyperledger Fabric v1.3.0
+- Hyperledger Fabric v1.4.0
 
 ## Guides
 
