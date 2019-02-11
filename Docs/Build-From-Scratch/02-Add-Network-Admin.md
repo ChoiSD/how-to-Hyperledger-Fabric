@@ -16,34 +16,23 @@ Generate a private key and a self-signed certificate for R1:
 
 ```bash
 # Create MSP folders
-mkdir -p org1.com/ca org1.com/users; cd org1.com/ca
-# Generate serial number
-SERIAL=$(xxd -l 16 -p /dev/random)
-# Generate ecdsa private key
-openssl ecparam -genkey -name prime256v1 -out private.key
-# Generate a self-signed CA certificate
-openssl req -new -x509 -set_serial 0x${SERIAL} -key private.key -out ca.org1.com-cert.pem -days 3650 -config ../../openssl.cnf
+mkdir -p org1.com/{ca,users}; cd org1.com/ca
+# Generate EC paramter with the group 'prime256v1'
+openssl ecparam -out param.out -name prime256v1
+# Generate Self-signed CA certificate
+openssl req -newkey ec:param.out -nodes -keyout private.key -x509 -days 3650 -out ca.org4.com-cert.pem -extensions v3_user -config ../../openssl.cnf
+# Rename private key
+mv private.key $(openssl x509 -noout -pubkey -in ca.org4.com-cert.pem | openssl asn1parse -strparse 23 -in - | openssl dgst -sha256 | awk '{print $2}')_sk
+rm param.out
 ```
 
 As there are some pre-configured values in `openssl.cnf`, we need to do put some values in this time like below:
 
 ```bash
 Country Name (2 letter code) [KR]:
-State or Province Name (full name) [Seoul]:
-Locality Name (eg, city) [Gangdong-gu]:
 Organization Name (eg, company) [org4.com]:org1.com
-Organizational Unit Name (eg, section) []:
-Common Name (eg, your name or your server's hostname) [ca.org4.com]:ca.org1.com
-Email Address []:
-```
-
-Transfrom private key into pkcs8 format:
-
-```bash
-openssl pkcs8 -topk8 -nocrypt -in private.key -out signcert-key.pem
-rm -f private.key
-mv signcert-key.pem $(openssl x509 -noout -pubkey -in ca.org1.com-cert.pem | openssl asn1parse -strparse 23 -in - | openssl dgst -sha256 | awk '{print $2}')_sk
-chmod 600 *_sk
+Organizational Unit Name (eg, section) [Blockchain Biz.]:
+Common Name (eg, your name or your servers hostname) [ca.org4.com]:ca.org1.com
 ```
 
 ## Run Fabric CA server(CA1)
@@ -59,8 +48,8 @@ docker run -d --name ca0_org1 --hostname ca0.org1.com \
         -v $PWD/$PUBLIC:/etc/hyperledger/fabric-ca-server/public.pem \
         -e FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server/public.pem \
         -e FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server/private.key \
-        hyperledger/fabric-ca:1.3.0 \
-        fabric-ca-server start -b admin:admin4org1
+        hyperledger/fabric-ca:1.4.0 \
+        fabric-ca-server start -b admin:adminpwOrg1
 ```
 
 ## Get admin's certificate
@@ -74,10 +63,16 @@ mkdir admin
 IP=$(docker inspect ca0_org1 -f '{{.NetworkSettings.Networks.howto_network.IPAddress}}')
 # Get certificate
 export FABRIC_CA_CLIENT_HOME=$PWD/admin
-../../bin/fabric-ca-client enroll -u http://admin:admin4org1@${IP}:7054 --csr.cn admin --csr.names C=KR,ST=Seoul,L=Gangdong-gu,O=org1.com
-# Create missing directories
-mkdir admin/msp/admincerts
-cp admin/msp/signcerts/cert.pem admin/msp/admincerts/
+../../bin/fabric-ca-client enroll -u http://admin:adminpwOrg1@${IP}:7054 --csr.names C=KR,ST=Seoul,L=Gangdong-gu,O=org1.com
+```
+
+Create MSP structure & Copy proper certificates:
+
+```bash
+cd ..
+mkdir -p msp/{admincerts,tlscacerts}
+cp -R users/admin/msp/cacerts msp/
+cp users/admin/msp/signcerts/cert.pem msp/admincerts/Admin@org1.com-cert.pem
 ```
 
 ## Allow member of other organization(R1) to administer a network
@@ -85,10 +80,10 @@ cp admin/msp/signcerts/cert.pem admin/msp/admincerts/
 Write a update network configuration file:
 
 ```bash
-cd ../..
+cd ..
 cat > configtx.yaml <<EOF
 Profiles:
-  SampleSoloGenesis:
+  HowToDoc2:
     Policies:
       Readers:
         Type: ImplicitMeta
@@ -98,7 +93,7 @@ Profiles:
         Rule: "ANY Writers"
       Admins:
         Type: ImplicitMeta
-        Rule: "ALL Admins"
+        Rule: "MAJORITY Admins"
     Capabilities:
       V1_3: true
     Orderer:
@@ -120,7 +115,7 @@ Profiles:
           Rule: "ANY Writers"
         Admins:
           Type: ImplicitMeta
-          Rule: "MAJORITY Admins"
+          Rule: "ALL Admins"
         BlockValidation:
           Type: ImplicitMeta
           Rule: "ANY Writers"
@@ -128,33 +123,33 @@ Profiles:
         V1_1: true
       Organizations:
         - Name: Org4
-          ID: Org4MSP
-          MSPDir: org4.com/users/orderer/msp
+          ID: Org4
+          MSPDir: org4.com/msp
           Policies:
             Readers:
               Type: Signature
-              Rule: "OR('Org4MSP.member')"
+              Rule: "OR('Org4.member')"
             Writers:
               Type: Signature
-              Rule: "OR('Org4MSP.member')"
+              Rule: "OR('Org4.member')"
             Admins:
               Type: Signature
-              Rule: "OR('Org4MSP.admin')"
+              Rule: "OR('Org4.admin')"
         - Name: Org1
-          ID: Org1MSP
-          MSPDir: org1.com/users/admin/msp
+          ID: Org1
+          MSPDir: org1.com/msp
           Policies:
             Readers:
               Type: Signature
-              Rule: "OR('Org1MSP.member')"
+              Rule: "OR('Org1.member')"
             Writers:
               Type: Signature
-              Rule: "OR('Org1MSP.member')"
+              Rule: "OR('Org1.member')"
             Admins:
               Type: Signature
-              Rule: "OR('Org1MSP.admin')"
+              Rule: "OR('Org1.admin')"
     Consortiums:
-      SampleConsortium:
+      HowToConsortium:
         Organizations:
 EOF
 ```
@@ -162,8 +157,7 @@ EOF
 Generate an update genesis block with updated NC4:
 
 ```bash
-export FABRIC_CFG_PATH=$PWD
-bin/configtxgen -profile SampleSoloGenesis -channelID syschannel -outputBlock ./genesis.block.updated
+bin/configtxgen -configPath $PWD -profile HowToDoc2 -channelID syschannel -outputBlock ./genesis.block
 ```
 
 ## Run orderer(O4) with updated configuration
@@ -174,14 +168,14 @@ docker rm -f orderer
 # Run orderer
 docker run -d --name orderer --hostname orderer.org4.com \
         --network howto_network \
-        -v $PWD/genesis.block.updated:/var/hyperledger/fabric/genesis.block \
+        -v $PWD/genesis.block:/var/hyperledger/fabric/genesis.block \
         -v $PWD/org4.com/users/orderer/msp:/var/hyperledger/fabric/msp \
         -e ORDERER_GENERAL_LISTENADDRESS=0.0.0.0 \
         -e ORDERER_GENERAL_LOGLEVEL=debug \
         -e ORDERER_GENERAL_GENESISMETHOD=file \
         -e ORDERER_GENERAL_GENESISFILE=/var/hyperledger/fabric/genesis.block \
         -e ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/fabric/msp \
-        -e ORDERER_GENERAL_LOCALMSPID=Org4MSP \
-        hyperledger/fabric-orderer:1.3.0 \
+        -e ORDERER_GENERAL_LOCALMSPID=Org4 \
+        hyperledger/fabric-orderer:1.4.0 \
         orderer
 ```

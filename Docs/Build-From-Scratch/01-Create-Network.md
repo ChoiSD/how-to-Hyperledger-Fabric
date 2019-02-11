@@ -11,7 +11,6 @@ R4 : org4.com
 Create a openssl configuration file:
 
 ```bash
-mkdir org4.com; cd org4.com
 cat > openssl.cnf <<EOF
 [ req ]
 default_bits            = 256
@@ -49,11 +48,11 @@ Generate a private key file and a self-signed certificate using OpenSSL:
 
 ```bash
 # Create local MSP folders
-mkdir -p {users,ca}; cd ca
+mkdir -p org4.com/{users,ca}; cd org4.com/ca
 # Generate EC paramter with the group 'prime256v1'
 openssl ecparam -out param.out -name prime256v1
 # Generate Self-signed CA certificate
-openssl req -newkey ec:param.out -nodes -keyout private.key -x509 -days 3650 -out ca.org4.com-cert.pem -extensions v3_user -config ../openssl.cnf
+openssl req -newkey ec:param.out -nodes -keyout private.key -x509 -days 3650 -out ca.org4.com-cert.pem -extensions v3_user -config ../../openssl.cnf
 # Rename private key
 mv private.key $(openssl x509 -noout -pubkey -in ca.org4.com-cert.pem | openssl asn1parse -strparse 23 -in - | openssl dgst -sha256 | awk '{print $2}')_sk
 rm param.out
