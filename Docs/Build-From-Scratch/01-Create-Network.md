@@ -18,7 +18,7 @@ default_md              = sha256
 default_keyfile         = private.key
 distinguished_name      = req_distinguished_name
 extensions              = v3_user
- 
+
 [ v3_user ]
 keyUsage                = critical, digitalSignature, keyEncipherment, keyCertSign, cRLSign
 extendedKeyUsage        = anyExtendedKeyUsage
@@ -116,7 +116,7 @@ IP=$(docker inspect ca0_org4 -f '{{.NetworkSettings.Networks.howto_network.IPAdd
 Register orderer:
 
 ```bash
-../../bin/fabric-ca-client register -H $PWD/admin --id.name "orderer.org4.com" --id.type peer --id.maxenrollments 1 --id.secret ordererpw
+../../bin/fabric-ca-client register -H $PWD/Admin@org4.com --id.name "orderer.org4.com" --id.type peer --id.maxenrollments 1 --id.secret ordererpw
 ```
 
 Enroll orderer:
@@ -128,7 +128,7 @@ mkdir -p ../orderers/orderer.org4.com
 
 ## Make MSP directory
 
-Make MSP structure & Copy proper certificates: 
+Make MSP structure & Copy proper certificates:
 
 ```bash
 # Make directories
@@ -138,7 +138,7 @@ mkdir -p msp/{admincerts,cacerts}
 cp ca/ca.org4.com-cert.pem msp/cacerts/
 cp users/Admin@org4.com/msp/signcerts/cert.pem msp/admincerts/Admin@org4.com-cert.pem
 # Copy it to Orderer
-cp -R msp/admincerts orderer/msp/
+cp -R msp/admincerts orderers/orderer.org4.com/msp/
 ```
 
 ## Create a network configuration(NC4)
@@ -255,7 +255,7 @@ bin/configtxgen -configPath $PWD -profile HowToDoc1 -channelID syschannel -outpu
 docker run -d --name orderer --hostname orderer.org4.com \
         --network howto_network \
         -v $PWD/genesis.block:/var/hyperledger/fabric/genesis.block \
-        -v $PWD/org4.com/orderer/msp:/var/hyperledger/fabric/msp \
+        -v $PWD/org4.com/orderers/orderer.org4.com/msp:/var/hyperledger/fabric/msp \
         -e ORDERER_GENERAL_LISTENADDRESS=0.0.0.0 \
         -e ORDERER_GENERAL_LOGLEVEL=debug \
         -e ORDERER_GENERAL_GENESISMETHOD=file \
