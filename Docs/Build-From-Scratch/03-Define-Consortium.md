@@ -18,92 +18,60 @@ Generate a private key and a self-signed certificate for R1 (Member):
 
 ```bash
 # Create MSP folders
-mkdir -p org1.com/X1/{users,ca}; cd org1.com/X1/ca
-# Generate EC paramter with the group 'prime256v1'
-openssl ecparam -out param.out -name prime256v1
+mkdir -p org1.com/X1/{users,ca}
 # Generate Self-signed CA certificate
-openssl req -newkey ec:param.out -nodes -keyout private.key -x509 -days 3650 -out ca.member.org1.com-cert.pem -extensions v3_user -config ../../../openssl.cnf
-```
-
-As there are some pre-configured values in `openssl.cnf`, we need to do put some values in this time like below:
-
-```bash
-Country Name (2 letter code) [KR]:
-State or Province Name (full name) [Seoul]:
-Locality Name (eg, city) [Gangdong-gu]:
-Organization Name (eg, company) [org4.com]:org1.com
-Common Name (eg, your name or your servers hostname) [ca.org4.com]:ca.member.org1.com
-```
-
-Rename private key and Cleanse:
-
-```bash
-# Rename private key
-mv private.key $(openssl x509 -noout -pubkey -in ca.member.org1.com-cert.pem | openssl asn1parse -strparse 23 -in - | openssl dgst -sha256 | awk '{print $2}')_sk
-rm param.out
+openssl req -new -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -x509 \
+    -days 365 \
+    -subj "/C=KR/ST=Seoul/L=Gangdong-gu/O=member.org1.com/OU=Blockchain/CN=ca.member.org1.com" \
+    -config ./openssl.cnf -extensions v3_user \
+    -keyout org1.com/X1/ca/private.key \
+    -out org1.com/X1/ca/ca.member.org1.com-cert.pem
 ```
 
 Generate a private key and a self-signed certificate for R2:
 
 ```bash
 # Create MSP folders
-cd ../../..
-mkdir -p org2.com/{users,ca}; cd org2.com/ca
-# Generate EC paramter with the group 'prime256v1'
-openssl ecparam -out param.out -name prime256v1
+mkdir -p org2.com/{users,ca}
 # Generate Self-signed CA certificate
-openssl req -newkey ec:param.out -nodes -keyout private.key -x509 -days 3650 -out ca.org2.com-cert.pem -extensions v3_user -config ../../openssl.cnf
-```
-
-As there are some pre-configured values in `openssl.cnf`, we need to do put some values in this time like below:
-
-```bash
-Country Name (2 letter code) [KR]:
-State or Province Name (full name) [Seoul]:
-Locality Name (eg, city) [Gangdong-gu]:
-Organization Name (eg, company) [org4.com]:org2.com
-Common Name (eg, your name or your servers hostname) [ca.org4.com]:ca.org2.com
-```
-
-Rename private key and Cleanse:
-
-```bash
-# Rename private key
-mv private.key $(openssl x509 -noout -pubkey -in ca.org2.com-cert.pem | openssl asn1parse -strparse 23 -in - | openssl dgst -sha256 | awk '{print $2}')_sk
-rm param.out
+openssl req -new -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -x509 \
+    -days 365 \
+    -subj "/C=KR/ST=Seoul/L=Gangdong-gu/O=org2.com/OU=Blockchain/CN=ca.org2.com" \
+    -config ./openssl.cnf -extensions v3_user \
+    -keyout org2.com/ca/private.key \
+    -out org2.com/ca/ca.org2.com-cert.pem
 ```
 
 ## Run Fabric CA server(CA1 Member & CA2)
 
-Run Fabric CA server (CA2):
-
-```bash
-PRIVATE=$(ls *_sk)
-PUBLIC=$(ls *.pem)
-docker run -d --name ca0_org2 --hostname ca0.org2.com \
-        --network howto_network \
-        -v $PWD/$PRIVATE:/etc/hyperledger/fabric-ca-server/private.key \
-        -v $PWD/$PUBLIC:/etc/hyperledger/fabric-ca-server/public.pem \
-        -e FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server/public.pem \
-        -e FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server/private.key \
-        hyperledger/fabric-ca:1.4.0 \
-        fabric-ca-server start -b admin:adminpwOrg2
-```
-
 Run Fabric CA server (CA1 member):
 
 ```bash
-cd ../../org1.com/X1/ca
-PRIVATE=$(ls *_sk)
-PUBLIC=$(ls *.pem)
-docker run -d --name ca_member_org1 --hostname ca.member.org1.com \
+PRIVATE=$(ls org1.com/X1/ca/*.key)
+PUBLIC=$(ls org1.com/X1/ca/*.pem)
+docker run -d --name ca.member.org1.com --hostname ca.member.org1.com \
         --network howto_network \
         -v $PWD/$PRIVATE:/etc/hyperledger/fabric-ca-server/private.key \
         -v $PWD/$PUBLIC:/etc/hyperledger/fabric-ca-server/public.pem \
         -e FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server/public.pem \
         -e FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server/private.key \
         hyperledger/fabric-ca:1.4.0 \
-        fabric-ca-server start -b admin:adminpwOrg1
+        fabric-ca-server start -b admin:adminpw
+```
+
+Run Fabric CA server (CA2):
+
+```bash
+PRIVATE=$(ls org2.com/ca/*.key)
+PUBLIC=$(ls org2.com/ca/*.pem)
+docker run -d --name ca.org2.com --hostname ca0.org2.com \
+        --network howto_network \
+        -v $PWD/$PRIVATE:/etc/hyperledger/fabric-ca-server/private.key \
+        -v $PWD/$PUBLIC:/etc/hyperledger/fabric-ca-server/public.pem \
+        -e FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server/public.pem \
+        -e FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server/private.key \
+        hyperledger/fabric-ca:1.4.0 \
+        fabric-ca-server start -b admin:adminpw
 ```
 
 ## Get admin's certificate
@@ -111,43 +79,68 @@ docker run -d --name ca_member_org1 --hostname ca.member.org1.com \
 Get admin user's certificate from CA server (CA1 member):
 
 ```bash
-cd ../users
-mkdir Admin@org1.com
+mkdir -p org1.com/X1/users/Admin@member.org1.com/msp/admincerts
 # Get IP address of CA server
-IP=$(docker inspect ca_member_org1 -f '{{.NetworkSettings.Networks.howto_network.IPAddress}}')
+IP=$(docker inspect ca.member.org1.com -f '{{.NetworkSettings.Networks.howto_network.IPAddress}}')
 # Get certificate
-../../../bin/fabric-ca-client enroll -H $PWD/Admin@org1.com -u http://admin:adminpwOrg1@${IP}:7054 --csr.names C=KR,ST=Seoul,L=Gangdong-gu,O=org1.com
-```
-
-Create MSP structure & Copy proper certificates for Org1 Member:
-
-```bash
-cd ..
-mkdir -p msp/{admincerts,cacerts}
-# Copy certificates
-cp ca/ca.member.org1.com-cert.pem msp/cacerts/
-cp users/Admin@org1.com/msp/signcerts/cert.pem msp/admincerts/Admin@org1.com-cert.pem
+./bin/fabric-ca-client enroll -H $PWD/org1.com/X1/users/Admin@member.org1.com -u http://admin:adminpw@${IP}:7054 --csr.names C=KR,ST=Seoul,L=Gangdong-gu,O=member.org1.com
+# Set Admin Certificate
+cp org1.com/X1/users/Admin@member.org1.com/msp/signcerts/cert.pem org1.com/X1/users/Admin@member.org1.com/msp/admincerts/
 ```
 
 Get admin user's certificate from CA server (CA2):
 
 ```bash
-cd ../../org2.com/users
-mkdir Admin@org2.com
+mkdir org2.com/users/Admin@org2.com
 # Get IP address of CA server
-IP=$(docker inspect ca0_org2 -f '{{.NetworkSettings.Networks.howto_network.IPAddress}}')
+IP=$(docker inspect ca.org2.com -f '{{.NetworkSettings.Networks.howto_network.IPAddress}}')
 # Get certificate
-../../bin/fabric-ca-client enroll -H $PWD/Admin@org2.com -u http://admin:adminpwOrg2@${IP}:7054 --csr.names C=KR,ST=Seoul,L=Gangdong-gu,O=org2.com
+./bin/fabric-ca-client enroll -H $PWD/org2.com/users/Admin@org2.com -u http://admin:adminpw@${IP}:7054 --csr.names C=KR,ST=Seoul,L=Gangdong-gu,O=org2.com
+# Set Admin Certificate
+cp org2.com/users/Admin@org1.com/msp/signcerts/cert.pem org2.com/users/Admin@org2.com/msp/admincerts/
+
 ```
 
-Create MSP structure & Copy proper certificates:
+## Make MSP directory
+
+Make MSP structure & Copy proper certificates for R1 Member:
 
 ```bash
-cd ..
-mkdir -p msp/{admincerts,cacerts}
+mkdir -p org1.com/X1/msp/{admincerts,cacerts}
 # Copy certificates
-cp ca/ca.org2.com-cert.pem msp/cacerts/
-cp users/Admin@org2.com/msp/signcerts/cert.pem msp/admincerts/Admin@org2.com-cert.pem
+cp org1.com/X1/ca/ca.member.org1.com-cert.pem org1.com/X1/msp/cacerts/
+cp org1.com/X1/users/Admin@member.org1.com/msp/signcerts/cert.pem org1.com/X1/msp/admincerts/
+# Enable Node OUs
+cat > org1.com/X1/msp/config.yaml <<EOF
+NodeOUs:
+  Enable: true
+  ClientOUIdentifier:
+    Certificate: "cacerts/ca.member.org1.com-cert.pem"
+    OrganizationalUnitIdentifier: "client"
+  PeerOUIdentifier:
+    Certificate: "cacerts/ca.member.org1.com-cert.pem"
+    OrganizationalUnitIdentifier: "peer"
+EOF
+```
+
+Make MSP structure & Copy proper certificates for R2:
+
+```bash
+mkdir -p org2.com/msp/{admincerts,cacerts}
+# Copy certificates
+cp org2.com/ca/ca.org2.com-cert.pem org2.com/msp/cacerts/
+cp org2.com/users/Admin@org2.com/msp/signcerts/cert.pem org2.com/msp/admincerts/
+# Enable Node OUs
+cat > org2.com/msp/config.yaml <<EOF
+NodeOUs:
+  Enable: true
+  ClientOUIdentifier:
+    Certificate: "cacerts/ca.org2.com-cert.pem"
+    OrganizationalUnitIdentifier: "client"
+  PeerOUIdentifier:
+    Certificate: "cacerts/ca.org2.com-cert.pem"
+    OrganizationalUnitIdentifier: "peer"
+EOF
 ```
 
 ## Create a consortium(X1) to a network
@@ -155,7 +148,6 @@ cp users/Admin@org2.com/msp/signcerts/cert.pem msp/admincerts/Admin@org2.com-cer
 Write a update network configuration file:
 
 ```bash
-cd ..
 cat > configtx.yaml <<EOF
 ###############################################
 Organizations:
@@ -202,7 +194,7 @@ Organizations:
         Type: Signature
         Rule: "OR('Org1X1.admin')"
     AnchorPeers:
-      - Host: peer0.org1.com
+      - Host: peer0.member.org1.com
         Port: 7051
   - &Org2
     Name: Org2
@@ -221,24 +213,6 @@ Organizations:
     AnchorPeers:
       - Host: peer0.org2.com
         Port: 7051
-###############################################
-Application: &ApplicationDefaults
-  ACLs:
-  Organizations:
-  Policies:
-    Readers:
-      Type: ImplicitMeta
-      Rule: "ANY Readers"
-    Writers:
-      Type: ImplicitMeta
-      Rule: "ANY Writers"
-    Admins:
-      Type: ImplicitMeta
-      Rule: "MAJORITY Admins"
-  Capabilities:
-    V1_3: true
-    V1_2: false
-    V1_1: false
 ###############################################
 Orderer: &Orderer
   OrdererType: solo
@@ -259,7 +233,7 @@ Orderer: &Orderer
       Rule: "ANY Writers"
     Admins:
       Type: ImplicitMeta
-      Rule: "ANY Admins"
+      Rule: "ALL Admins"
     BlockValidation:
       Type: ImplicitMeta
       Rule: "ANY Writers"
@@ -278,20 +252,18 @@ Profiles:
         Rule: "ANY Writers"
       Admins:
         Type: ImplicitMeta
-        Rule: "MAJORITY Admins"
+        Rule: "ALL Admins"
     Capabilities:
       V1_3: true
-    Application:
-      <<: *ApplicationDefaults
-      Organizations:
-        - *Org1X1
-        - *Org2
     Orderer:
       <<: *Orderer
       Organizations:
-        - *Org1NC4
         - *Org4
     Consortiums:
+      NC4:
+        Organizations:
+          - *Org4
+          - *Org1NC4
       X1:
         Organizations:
           - *Org1X1
@@ -302,25 +274,5 @@ EOF
 Generate an updated genesis block:
 
 ```bash
-bin/configtxgen -configPath $PWD -profile HowToDoc3 -channelID syschannel -outputBlock ./genesis.block
-```
-
-## Run orderer(O4) with updated configuration
-
-```bash
-# Stop existing orderer
-docker rm -f orderer
-# Run orderer
-docker run -d --name orderer --hostname orderer.org4.com \
-        --network howto_network \
-        -v $PWD/genesis.block:/var/hyperledger/fabric/genesis.block \
-        -v $PWD/org4.com/orderers/orderer.org4.com/msp:/var/hyperledger/fabric/msp \
-        -e ORDERER_GENERAL_LISTENADDRESS=0.0.0.0 \
-        -e ORDERER_GENERAL_LOGLEVEL=debug \
-        -e ORDERER_GENERAL_GENESISMETHOD=file \
-        -e ORDERER_GENERAL_GENESISFILE=/var/hyperledger/fabric/genesis.block \
-        -e ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/fabric/msp \
-        -e ORDERER_GENERAL_LOCALMSPID=Org4 \
-        hyperledger/fabric-orderer:1.4.0 \
-        orderer
+bin/configtxgen -configPath $PWD -profile HowToDoc3 -channelID syschannel -outputBlock ./channel-artifacts/genesis.block
 ```
