@@ -252,7 +252,7 @@ Profiles:
         Rule: "ANY Writers"
       Admins:
         Type: ImplicitMeta
-        Rule: "ALL Admins"
+        Rule: "MAJAORITY Admins"
     Capabilities:
       V1_3: true
     Orderer:
