@@ -34,6 +34,7 @@ cp org1.com/X1/msp/config.yaml org1.com/X1/users/peer0.member.org1.com/msp/
 docker run -d --name peer0.member.org1.com --hostname peer0.member.org1.com \
   --network howto_network \
   -e CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock \
+  -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=howto_network \
   -e CORE_PEER_GOSSIP_USELEADERELECTION=true \
   -e CORE_PEER_GOSSIP_ORGLEADER=false \
   -e CORE_PEER_ID=peer0.member.org1.com \
@@ -57,6 +58,7 @@ mkdir chaincodes
 docker run -d --name cli \
   --network howto_network \
   -v $PWD/org1.com/X1:/org1 \
+  -v $PWD/org2.com:/org2 \
   -v $PWD/channel-artifacts:/channel-artifacts \
   -v $PWD/chaincodes:/opt/gopath/src/github.com/chaincodes \
   hyperledger/fabric-tools:1.4.0 \
@@ -82,4 +84,15 @@ docker exec -it \
   -e CORE_PEER_MSPCONFIGPATH=/org1/users/Admin@member.org1.com/msp \
   cli \
   peer channel join -b c1.block
+```
+
+Update anchor peers in `c1` channel:
+
+```bash
+docker exec -it \
+  -e CORE_PEER_ADDRESS=peer0.member.org1.com:7051 \
+  -e CORE_PEER_LOCALMSPID=Org1X1 \
+  -e CORE_PEER_MSPCONFIGPATH=/org1/users/Admin@member.org1.com/msp \
+  cli \
+  peer channel update -o orderer.org4.com:7050 -c c1 -f /channel-artifacts/C1R1anchors.tx
 ```

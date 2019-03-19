@@ -109,6 +109,7 @@ Make MSP structure & Copy proper certificates for R1 Member:
 mkdir -p org1.com/X1/msp/{admincerts,cacerts}
 # Copy certificates
 cp org1.com/X1/ca/ca.member.org1.com-cert.pem org1.com/X1/msp/cacerts/
+cp org1.com/X1/ca/ca.member.org1.com-cert.pem org1.com/X1/users/Admin@member.org1.com/msp/cacerts/
 cp org1.com/X1/users/Admin@member.org1.com/msp/signcerts/cert.pem org1.com/X1/msp/admincerts/
 # Enable Node OUs
 cat > org1.com/X1/msp/config.yaml <<EOF
@@ -129,6 +130,7 @@ Make MSP structure & Copy proper certificates for R2:
 mkdir -p org2.com/msp/{admincerts,cacerts}
 # Copy certificates
 cp org2.com/ca/ca.org2.com-cert.pem org2.com/msp/cacerts/
+cp org2.com/ca/ca.org2.com-cert.pem org2.com/users/Admin@org2.com/msp/cacerts/
 cp org2.com/users/Admin@org2.com/msp/signcerts/cert.pem org2.com/msp/admincerts/
 # Enable Node OUs
 cat > org2.com/msp/config.yaml <<EOF
