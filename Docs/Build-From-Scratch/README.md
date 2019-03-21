@@ -17,3 +17,6 @@ This guide is configured with several sub-guides which are sorted by number in f
 2. [Add a network administrator](https://github.com/ChoiSD/how-to-Hyperledger-Fabric/blob/master/Docs/Build-From-Scratch/02-Add-Network-Admin.md)
 3. [Define a consortium](https://github.com/ChoiSD/how-to-Hyperledger-Fabric/blob/master/Docs/Build-From-Scratch/03-Define-Consortium.md)
 4. [Create a channel for a consortium](https://github.com/ChoiSD/how-to-Hyperledger-Fabric/blob/master/Docs/Build-From-Scratch/04-Create-Channel-For-A-Consortium.md)
+5. [Peers and Ledgers](https://github.com/ChoiSD/how-to-Hyperledger-Fabric/blob/master/Docs/Build-From-Scratch/05-Peers-Ledgers.md)
+6. [Smart Contract](https://github.com/ChoiSD/how-to-Hyperledger-Fabric/blob/master/Docs/Build-From-Scratch/06-Smart-Contract.md)
+7. [Network Completed](https://github.com/ChoiSD/how-to-Hyperledger-Fabric/blob/master/Docs/Build-From-Scratch/07-Network-Completed.md)

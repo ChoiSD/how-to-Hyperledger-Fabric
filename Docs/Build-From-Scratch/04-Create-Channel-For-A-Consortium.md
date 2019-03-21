@@ -122,32 +122,6 @@ Application: &Applications
     V1_3: true
 ###############################################
 Profiles:
-  HowToDoc3:
-    Policies:
-      Readers:
-        Type: ImplicitMeta
-        Rule: "ANY Readers"
-      Writers:
-        Type: ImplicitMeta
-        Rule: "ANY Writers"
-      Admins:
-        Type: ImplicitMeta
-        Rule: "ALL Admins"
-    Capabilities:
-      V1_3: true
-    Orderer:
-      <<: *Orderer
-      Organizations:
-        - *Org4
-    Consortiums:
-      NC4:
-        Organizations:
-          - *Org4
-          - *Org1NC4
-      X1:
-        Organizations:
-          - *Org1X1
-          - *Org2
   HowToDoc4:
     Consortium: X1
     Application:
@@ -191,4 +165,29 @@ Define a anchor peer for R2:
 bin/configtxgen -configPath $PWD -profile HowToDoc4 -channelID c1 -outputAnchorPeersUpdate ./channel-artifacts/C1R2anchors.tx -asOrg Org2
 ```
 
-And it's done. The above blocks we've created will be used after starting peers on this network.
+## Create a channel (C1)
+
+Run CLI container first:
+
+```bash
+mkdir chaincodes
+
+docker run -d --name cli \
+  --network howto_network \
+  -v $PWD/org1.com/X1:/org1 \
+  -v $PWD/org2.com:/org2 \
+  -v $PWD/channel-artifacts:/channel-artifacts \
+  -v $PWD/chaincodes:/opt/gopath/src/github.com/chaincodes \
+  hyperledger/fabric-tools:1.4.0 \
+  sleep 60000
+```
+
+Create a channel block:
+
+```bash
+docker exec -it \
+  -e CORE_PEER_LOCALMSPID=Org1X1 \
+  -e CORE_PEER_MSPCONFIGPATH=/org1/users/Admin@member.org1.com/msp \
+  cli \
+  peer channel create -o orderer.org4.com:7050 -c c1 -f /channel-artifacts/C1.tx
+```

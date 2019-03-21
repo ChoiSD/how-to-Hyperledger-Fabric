@@ -254,7 +254,7 @@ Profiles:
         Rule: "ANY Writers"
       Admins:
         Type: ImplicitMeta
-        Rule: "MAJAORITY Admins"
+        Rule: "MAJORITY Admins"
     Capabilities:
       V1_3: true
     Orderer:
@@ -277,4 +277,24 @@ Generate an updated genesis block:
 
 ```bash
 bin/configtxgen -configPath $PWD -profile HowToDoc3 -channelID syschannel -outputBlock ./channel-artifacts/genesis.block
+```
+
+## Run orderer(O4) with updated configuration
+
+```bash
+# Stop existing orderer
+docker rm -f orderer
+# Run orderer
+docker run -d --name orderer.org4.com --hostname orderer.org4.com \
+        --network howto_network \
+        -v $PWD/channel-artifacts/genesis.block:/var/hyperledger/fabric/genesis.block \
+        -v $PWD/org4.com/users/orderer.org4.com/msp:/var/hyperledger/fabric/msp \
+        -e ORDERER_GENERAL_LISTENADDRESS=0.0.0.0 \
+        -e ORDERER_GENERAL_LOGLEVEL=debug \
+        -e ORDERER_GENERAL_GENESISMETHOD=file \
+        -e ORDERER_GENERAL_GENESISFILE=/var/hyperledger/fabric/genesis.block \
+        -e ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/fabric/msp \
+        -e ORDERER_GENERAL_LOCALMSPID=Org4 \
+        hyperledger/fabric-orderer:1.4.0 \
+        orderer
 ```

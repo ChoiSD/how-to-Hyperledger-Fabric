@@ -50,31 +50,6 @@ docker run -d --name peer0.member.org1.com --hostname peer0.member.org1.com \
 
 ## Join P1 into C1 channel
 
-Run CLI container first:
-
-```bash
-mkdir chaincodes
-
-docker run -d --name cli \
-  --network howto_network \
-  -v $PWD/org1.com/X1:/org1 \
-  -v $PWD/org2.com:/org2 \
-  -v $PWD/channel-artifacts:/channel-artifacts \
-  -v $PWD/chaincodes:/opt/gopath/src/github.com/chaincodes \
-  hyperledger/fabric-tools:1.4.0 \
-  sleep 60000
-```
-
-Create a channel block:
-
-```bash
-docker exec -it \
-  -e CORE_PEER_LOCALMSPID=Org1X1 \
-  -e CORE_PEER_MSPCONFIGPATH=/org1/users/Admin@member.org1.com/msp \
-  cli \
-  peer channel create -o orderer.org4.com:7050 -c c1 -f /channel-artifacts/C1.tx
-```
-
 Join P1 into `c1` channel with a block:
 
 ```bash
