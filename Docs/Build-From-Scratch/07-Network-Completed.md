@@ -20,10 +20,10 @@ IP=$(docker inspect ca.org2.com -f '{{.NetworkSettings.Networks.howto_network.IP
 Enroll P2:
 
 ```bash
-mkdir -p org2.com/users/peer0.org2.com/msp/admincerts
 ./bin/fabric-ca-client enroll -H $PWD/org2.com/users/peer0.org2.com -u http://peer0.org2.com:peerpw@${IP}:7054 --csr.names C=KR,ST=Seoul,L=Gangdong-gu,O=org2.com
 # Copy Admin certs & config.yaml
-cp org2.com/msp/admincerts/cert.pem org2.com/users/peer0.org2.com/msp/admincerts/
+cp -R org2.com/msp/admincerts org2.com/users/peer0.org2.com/msp/
+mv org2.com/users/peer0.org2.com/msp/cacerts/*.pem org2.com/users/peer0.org2.com/msp/cacerts/ca.org2.com-cert.pem
 cp org2.com/msp/config.yaml org2.com/users/peer0.org2.com/msp/
 ```
 
@@ -34,6 +34,8 @@ Run P2:
 ```bash
 docker run -d --name peer0.org2.com --hostname peer0.org2.com \
   --network howto_network \
+  -v /var/run/docker.sock:/host/var/run/docker.sock \
+  -v $PWD/org2.com/users/peer0.org2.com/msp:/etc/hyperledger/fabric/msp \
   -e CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock \
   -e CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=howto_network \
   -e CORE_PEER_GOSSIP_USELEADERELECTION=true \
@@ -43,8 +45,6 @@ docker run -d --name peer0.org2.com --hostname peer0.org2.com \
   -e CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org2.com:7051 \
   -e CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org2.com:7051 \
   -e CORE_PEER_LOCALMSPID=Org2 \
-  -v /var/run/docker.sock:/host/var/run/docker.sock \
-  -v $PWD/org2.com/users/peer0.org2.com/msp:/etc/hyperledger/fabric/msp \
   hyperledger/fabric-peer:1.4.0 \
   peer node start
 ```

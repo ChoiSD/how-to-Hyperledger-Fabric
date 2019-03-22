@@ -56,7 +56,6 @@ cp org3.com/users/Admin@org3.com/msp/signcerts/cert.pem org3.com/users/Admin@org
 mkdir -p org3.com/msp/{admincerts,cacerts}
 # Copy certificates
 cp org3.com/ca/ca.org3.com-cert.pem org3.com/msp/cacerts/
-cp org3.com/ca/ca.org3.com-cert.pem org3.com/users/Admin@org3.com/msp/cacerts/
 cp org3.com/users/Admin@org3.com/msp/signcerts/cert.pem org3.com/msp/admincerts/
 # Enable Node OUs
 cat > org3.com/msp/config.yaml <<EOF
@@ -73,203 +72,99 @@ EOF
 
 ## Create a consortium(X2) to a network
 
-```bash
-cat > configtx.yaml <<EOF
-###############################################
-Organizations:
-  - &Org4
-    Name: Org4
-    ID: Org4
-    MSPDir: org4.com/msp
-    Policies:
-      Readers:
-        Type: Signature
-        Rule: "OR('Org4.member')"
-      Writers:
-        Type: Signature
-        Rule: "OR('Org4.member')"
-      Admins:
-        Type: Signature
-        Rule: "OR('Org4.admin')"
-  - &Org1NC4
-    Name: Org1NC4
-    ID: Org1NC4
-    MSPDir: org1.com/NC4/msp
-    Policies:
-      Readers:
-        Type: Signature
-        Rule: "OR('Org1NC4.member')"
-      Writers:
-        Type: Signature
-        Rule: "OR('Org1NC4.member')"
-      Admins:
-        Type: Signature
-        Rule: "OR('Org1NC4.admin')"
-  - &Org1X1
-    Name: Org1X1
-    ID: Org1X1
-    MSPDir: org1.com/X1/msp
-    Policies:
-      Readers:
-        Type: Signature
-        Rule: "OR('Org1X1.member')"
-      Writers:
-        Type: Signature
-        Rule: "OR('Org1X1.member')"
-      Admins:
-        Type: Signature
-        Rule: "OR('Org1X1.admin')"
-    AnchorPeers:
-      - Host: peer0.member.org1.com
-        Port: 7051
-  - &Org2
-    Name: Org2
-    ID: Org2
-    MSPDir: org2.com/msp
-    Policies:
-      Readers:
-        Type: Signature
-        Rule: "OR('Org2.member')"
-      Writers:
-        Type: Signature
-        Rule: "OR('Org2.member')"
-      Admins:
-        Type: Signature
-        Rule: "OR('Org2.admin')"
-    AnchorPeers:
-      - Host: peer0.org2.com
-        Port: 7051
-  - &Org3
-    Name: Org3
-    ID: Org3
-    MSPDir: org3.com/msp
-    Policies:
-      Readers:
-        Type: Signature
-        Rule: "OR('Org3.member')"
-      Writers:
-        Type: Signature
-        Rule: "OR('Org3.member')"
-      Admins:
-        Type: Signature
-        Rule: "OR('Org3.admin')"
-    AnchorPeers:
-      - Host: peer0.org3.com
-        Port: 7051
-###############################################
-Orderer: &Orderer
-  OrdererType: solo
-  Addresses:
-    - orderer.org4.com:7050
-  BatchTimeout: 2s
-  BatchSize:
-    MaxMessageCount: 10
-    AbsoluteMaxBytes: 10 MB
-    PreferredMaxBytes: 512 KB
-  MaxChannels: 0
-  Policies:
-    Readers:
-      Type: ImplicitMeta
-      Rule: "ANY Readers"
-    Writers:
-      Type: ImplicitMeta
-      Rule: "ANY Writers"
-    Admins:
-      Type: ImplicitMeta
-      Rule: "ALL Admins"
-    BlockValidation:
-      Type: ImplicitMeta
-      Rule: "ANY Writers"
-  Organizations:
-  Capabilities:
-    V1_1: true
-###############################################
-Application: &Applications
-  ACLs:
-  Policies:
-    Readers:
-      Type: ImplicitMeta
-      Rule: "ANY Readers"
-    Writers:
-      Type: ImplicitMeta
-      Rule: "ANY Writers"
-    Admins:
-      Type: ImplicitMeta
-      Rule: "MAJORITY Admins"
-  Organizations:
-  Capabilities:
-    V1_3: true
-###############################################
-Profiles:
-  HowToDoc8:
-    Policies:
-      Readers:
-        Type: ImplicitMeta
-        Rule: "ANY Readers"
-      Writers:
-        Type: ImplicitMeta
-        Rule: "ANY Writers"
-      Admins:
-        Type: ImplicitMeta
-        Rule: "MAJORITY Admins"
-    Capabilities:
-      V1_3: true
-    Orderer:
-      <<: *Orderer
-      Organizations:
-        - *Org4
-    Consortiums:
-      NC4:
-        Organizations:
-          - *Org4
-          - *Org1NC4
-      X1:
-        Organizations:
-          - *Org1X1
-          - *Org2
-      X2:
-        Organizations:
-          - *Org2
-          - *Org3
+We already built a network, which means all configurations are already in a block and cannot be changed by generating a new block.
+So we need to update a channel configuration block in the same way as [Adding an Org to a Channel](https://hyperledger-fabric.readthedocs.io/en/release-1.4/channel_update_tutorial.html).
 
-  HowToDoc9:
-    Consortium: X2
-    Application:
-      <<: *Applications
-      Organizations:
-        - *Org2
-        - *Org3
-    Policies:
-      Readers:
-        Type: ImplicitMeta
-        Rule: "ANY Readers"
-      Writers:
-        Type: ImplicitMeta
-        Rule: "ANY Writers"
-      Admins:
-        Type: ImplicitMeta
-        Rule: "ALL Admins"
-    Capabilities:
-      V1_3: true
-EOF
+### Retrieve a current configuration block
+
+```bash
+# Fetch a config block
+docker exec -it \
+  -e CORE_PEER_LOCALMSPID=Org4 \
+  -e CORE_PEER_MSPCONFIGPATH=/org4/users/orderer.org4.com/msp \
+  cli \
+  peer channel fetch config config_block.pb -o orderer.org4.com:7050 -c syschannel
+# Get out a block from container
+docker cp cli:/config_block.pb .
 ```
 
-## Re-generate a genesis block
+### Decode the block & Extract 'config' section
 
-Before generating a genesis block, stop a orderer first:
+Extract 'config' section:
 
 ```bash
-docker stop orderer.org4.com
+./bin/configtxlator proto_decode --input config_block.pb --type common.Block | jq '.data.data[0].payload.data.config' > config.json
 ```
 
-Then generate a new genesis block:
+Extract a base consortium(X1) from the 'config' section:
 
 ```bash
-bin/configtxgen -configPath $PWD -profile HowToDoc8 -channelID syschannel -outputBlock ./channel-artifacts/genesis.block
+jq '.channel_group.groups.Consortiums.groups.X1' config.json > X1.json
 ```
 
-Restart the orderer:
+### Create a new 'config' section
+
+Create a new consortium(X2):
 
 ```bash
-docker restart orderer.org4.com
+sed -i 's/Org1X1/Org3/g' X1.json
+ADMIN_CERT=$(cat org3.com/msp/admincerts/cert.pem | base64 | tr -d '\n')
+ROOT_CERT=$(cat org3.com/msp/cacerts/ca.org3.com-cert.pem | base64 | tr -d '\n')
+jq --arg admin ${ADMIN_CERT} --arg root ${ROOT_CERT} '.groups.Org3.values.MSP.value.config.admins[0] = $admin | .groups.Org3.values.MSP.value.config.root_certs[0] = $root | .groups.Org3.values.MSP.value.config.fabric_node_ous.client_ou_identifier.certificate = $root | .groups.Org3.values.MSP.value.config.fabric_node_ous.peer_ou_identifier.certificate = $root' X1.json > X2.json
+```
+
+Add a new consortium into a 'config' section:
+
+```bash
+X2=$(cat X2.json)
+jq --argjson x2 "$X2" '.channel_group.groups.Consortiums.groups.X2 = $x2' config.json > config_updated.json
+```
+
+### Encode both 'config' into binary blocks
+
+```bash
+./bin/configtxlator proto_encode --input config.json --type common.Config --output config.pb
+./bin/configtxlator proto_encode --input config_updated.json --type common.Config --output config_updated.pb
+```
+
+### Calculate the delta between two blocks
+
+```bash
+./bin/configtxlator compute_update --channel_id syschannel --original config.pb --updated config_updated.pb --output x2_updated.pb
+```
+
+### Decode the delta and Wrap it in an envelope message
+
+```bash
+./bin/configtxlator proto_decode --input x2_updated.pb --type common.ConfigUpdate | jq . > x2_updated.json
+echo '{"payload":{"header":{"channel_header":{"channel_id":"syschannel","type":2}},"data":{"config_update":'$(cat x2_updated.json)'}}}' | jq . > x2_enveloped.json
+./bin/configtxlator proto_encode --input x2_enveloped.json --type common.Envelope --output x2_enveloped.pb
+```
+
+### Add a new consortium (X2) by updating a channel
+
+Sign and Submit the message:
+
+```bash
+# Copy the message into 'cli' container
+docker cp x2_enveloped.pb cli:/
+# Sign the message with Org1NC4's admin
+docker exec -it \
+  -e CORE_PEER_LOCALMSPID=Org1NC4 \
+  -e CORE_PEER_MSPCONFIGPATH=/org1/NC4/users/Admin@order.org1.com/msp \
+  cli \
+  peer channel signconfigtx -f x2_enveloped.pb
+# Sign the message with Org4's admin
+docker exec -it \
+  -e CORE_PEER_LOCALMSPID=Org4 \
+  -e CORE_PEER_MSPCONFIGPATH=/org4/users/Admin@org4.com/msp \
+  cli \
+  peer channel signconfigtx -f x2_enveloped.pb
+# Submit the message
+docker exec -it \
+  -e CORE_PEER_LOCALMSPID=Org4 \
+  -e CORE_PEER_MSPCONFIGPATH=/org4/users/orderer.org4.com/msp \
+  cli \
+  peer channel update -f x2_enveloped.pb \
+  -o orderer.org4.com:7050 -c syschannel
 ```

@@ -55,7 +55,7 @@ mkdir -p org1.com/NC4/users/Admin@order.org1.com/msp/admincerts
 # Get IP address of CA server
 IP=$(docker inspect ca.order.org1.com -f '{{.NetworkSettings.Networks.howto_network.IPAddress}}')
 # Get certificate
-./bin/fabric-ca-client enroll -H $PWD/org1.com/NC4/Admin@order.org1.com -u http://admin:adminpw@${IP}:7054 --csr.names C=KR,ST=Seoul,L=Gangdong-gu,O=order.org1.com
+./bin/fabric-ca-client enroll -H $PWD/org1.com/NC4/users/Admin@order.org1.com -u http://admin:adminpw@${IP}:7054 --csr.names C=KR,ST=Seoul,L=Gangdong-gu,O=order.org1.com
 # Set Admin Certificate
 cp org1.com/NC4/users/Admin@order.org1.com/msp/signcerts/cert.pem org1.com/NC4/users/Admin@order.org1.com/msp/admincerts/
 ```
@@ -171,7 +171,7 @@ bin/configtxgen -configPath $PWD -profile HowToDoc2 -channelID syschannel -outpu
 
 ```bash
 # Stop existing orderer
-docker rm -f orderer
+docker rm -f orderer.org4.com
 # Run orderer
 docker run -d --name orderer.org4.com --hostname orderer.org4.com \
         --network howto_network \

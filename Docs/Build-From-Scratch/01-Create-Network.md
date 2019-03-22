@@ -53,7 +53,7 @@ Run Fabric CA server:
 ```bash
 PRIVATE=$(ls org4.com/ca/*.key)
 PUBLIC=$(ls org4.com/ca/*.pem)
-docker run -d --name ca.org4.com--hostname ca.org4.com \
+docker run -d --name ca.org4.com --hostname ca.org4.com \
         --network howto_network \
         -e FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server/public.pem \
         -e FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server/private.key \
@@ -109,7 +109,7 @@ mkdir -p org4.com/msp/{admincerts,cacerts}
 cp org4.com/ca/ca.org4.com-cert.pem org4.com/msp/cacerts/
 cp org4.com/users/Admin@org4.com/msp/signcerts/cert.pem org4.com/msp/admincerts/
 # Copy it to Orderer
-cp -R org4.com/msp org4.com/users/orderer.org4.com/
+cp -R org4.com/msp/admincerts org4.com/users/orderer.org4.com/msp/
 ```
 
 ## Create a network configuration(NC4)
