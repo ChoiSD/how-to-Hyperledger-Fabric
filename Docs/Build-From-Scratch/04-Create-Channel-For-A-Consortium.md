@@ -170,12 +170,13 @@ bin/configtxgen -configPath $PWD -profile HowToDoc4 -channelID c1 -outputAnchorP
 Run CLI container first:
 
 ```bash
-mkdir chaincodes
+mkdir chaincodes org3.com
 
 docker run -d --name cli \
   --network howto_network \
   -v $PWD/org1.com:/org1 \
   -v $PWD/org2.com:/org2 \
+  -v $PWD/org3.com:/org3 \
   -v $PWD/org4.com:/org4 \
   -v $PWD/channel-artifacts:/channel-artifacts \
   -v $PWD/chaincodes:/opt/gopath/src/github.com/chaincodes \

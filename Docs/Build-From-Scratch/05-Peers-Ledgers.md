@@ -15,7 +15,6 @@ Register P1:
 IP=$(docker inspect ca.member.org1.com -f '{{.NetworkSettings.Networks.howto_network.IPAddress}}')
 # Register P1
 ./bin/fabric-ca-client register -H $PWD/org1.com/X1/users/Admin@member.org1.com --id.name "peer0.member.org1.com" --id.type peer --id.maxenrollments 1 --id.secret peerpw
-
 ```
 
 Enroll P1:
